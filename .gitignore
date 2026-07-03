@@ -1,0 +1,64 @@
+# Ignore all files by default, then re-allow only core project content.
+*
+
+# Keep Git metadata control files
+!.gitignore
+
+# Keep core source and project files
+!AGENTS.md
+!README.md
+!pyproject.toml
+!uv.lock
+
+!proofbench/
+!proofbench/**
+!scripts/
+!scripts/**
+!docs/
+!docs/**
+!tests/
+!tests/**
+
+# Ignore environment files even if accidentally added
+.env
+.env.*
+
+# Ignore cache and local environment directories
+.cache/
+.uv-cache/
+.venv/
+venv/
+
+# Ignore generated benchmark outputs
+results/
+results/**
+# Ignore accidental top-level one-letter output folders from manual entries.
+n/
+y/
+
+# Ignore editor/build noise
+.DS_Store
+Thumbs.db
+*.log
+
+# Ignore editor/project metadata
+.vscode/
+.idea/
+
+# Ignore Python cache artifacts anywhere in repo
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.coverage
+.coverage.*
+htmlcov/
+
+# Ignore secrets/credentials keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+secrets/

@@ -1,0 +1,20 @@
+[project]
+name = "proofbench"
+version = "0.1.0"
+description = "A workshop benchmark for LLM and agent theorem proving on runtime-fetched miniF2F tasks."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "google-genai>=1.27.0",
+]
+
+[project.scripts]
+proofbench = "proofbench.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = true
+
