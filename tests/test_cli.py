@@ -5,7 +5,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from proofbench.agents.registry import registered_agent_names
-from proofbench.cli import _load_dotenv_file, _prompt_rapid_run_selections
+from proofbench.cli import (
+    _default_rapid_profile,
+    _load_dotenv_file,
+    _prompt_rapid_run_selections,
+)
 from proofbench.config import DEFAULT_TASK_IDS
 
 
@@ -24,6 +28,13 @@ class CliPromptTests(unittest.TestCase):
         self.assertEqual(selections["model_provider"], "mock")
         self.assertEqual(selections["verifier"], "static")
         self.assertTrue(selections["dashboard"])
+
+    @patch.dict(os.environ, {"GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}, clear=False)
+    def test_default_rapid_profile_requires_llm_credentials(self):
+        with self.assertRaisesRegex(
+            RuntimeError, "No LLM credentials found for rapid mode"
+        ):
+            _default_rapid_profile()
 
 
 class CliEnvTests(unittest.TestCase):

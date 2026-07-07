@@ -122,7 +122,32 @@ def _load_dotenv_file(path: Path) -> None:
 
 
 def _run(args: argparse.Namespace) -> int:
-    selections = _prompt_run_selections() if args.advanced else _prompt_rapid_run_selections()
+    try:
+        selections = (
+            _prompt_run_selections()
+            if args.advanced
+            else _prompt_rapid_run_selections()
+        )
+    except RuntimeError as exc:
+        print("LLM is not available:")
+        print(f"  {exc}")
+        print("No benchmark tasks were run.")
+        print(
+            "If you want smoke mode, run with --advanced and pick a mock provider; "
+            "otherwise set GEMINI_API_KEY (or GOOGLE_API_KEY) and retry."
+        )
+        return 1
+    try:
+        model = create_model(selections["model_provider"], selections["model_name"])
+    except RuntimeError as exc:
+        print("LLM is not available:")
+        print(f"  {exc}")
+        print("No benchmark tasks were run.")
+        print(
+            "If you want smoke mode, run with --advanced and pick a mock provider; "
+            "otherwise set GEMINI_API_KEY (or GOOGLE_API_KEY) and retry."
+        )
+        return 1
     config = ProofBenchConfig.from_env(
         minif2f_ref=selections["minif2f_ref"],
         minif2f_local=selections["minif2f_local"],
@@ -139,7 +164,6 @@ def _run(args: argparse.Namespace) -> int:
         max_iters=selections["max_iters"],
         include_informal=selections["include_informal"],
     )
-    model = create_model(selections["model_provider"], selections["model_name"])
     store = ResultStore(config.results_dir)
     rows = EvaluationRunner(verifier=verifier, result_store=store).run(
         agents=agents,
@@ -279,10 +303,15 @@ def _task_count_prompt(*, default: int) -> int:
 def _default_rapid_profile() -> tuple[str, str | None, str]:
     lean_root = os.getenv("PROOFBENCH_MINIF2F_LEAN_ROOT")
     has_gemini_key = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+    if not has_gemini_key:
+        raise RuntimeError(
+            "No LLM credentials found for rapid mode. Set GEMINI_API_KEY (or GOOGLE_API_KEY) "
+            "before running `proofbench run`, or use --advanced with a mock provider."
+        )
     lean_ready = bool(lean_root and Path(lean_root).expanduser().exists() and _lean_available())
-    if has_gemini_key and lean_ready:
+    if lean_ready:
         return ("gemini", "gemini-3.1-flash-lite", "lean")
-    return ("mock", None, "static")
+    return ("gemini", "gemini-3.1-flash-lite", "auto")
 
 
 def _lean_available() -> bool:

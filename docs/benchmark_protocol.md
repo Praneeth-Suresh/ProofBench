@@ -7,8 +7,9 @@ The default comparison is:
 ```
 
 The script runs baseline plus ReAct on the default tasks and writes `results/dashboard.html`.
-It uses mock+static mode for local smoke checks and switches to Gemini+Lean
-grading when Lean tooling and an API key are configured.
+By default, `proofbench run` now requires a configured LLM provider and will not
+silently fall back to smoke mode when credentials are missing. Use
+`--advanced` with `mock`/`mock-react` for explicit smoke-only runs.
 
 If you run `uv run proofbench run` manually, the rapid path asks only for
 comma-separated agent names and the number of default tasks. Keep the same
