@@ -48,6 +48,31 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Use the full setup prompt instead of the two-question rapid path.",
     )
+    run_p.add_argument("--agents", help="Comma-separated registered agents to run, for example llm_baseline,react.")
+    run_p.add_argument("--tasks", help="Comma-separated miniF2F theorem ids, or all for the default task set.")
+    run_p.add_argument("--task-count", type=int, help="Run the first N default tasks without prompting.")
+    run_p.add_argument(
+        "--model-provider",
+        choices=[option[0] for option in MODEL_PROVIDER_OPTIONS],
+        help="Model provider for a non-interactive run. Defaults to gemini when credentials exist.",
+    )
+    run_p.add_argument("--model-name", help="Provider-specific model name override.")
+    run_p.add_argument(
+        "--verifier",
+        choices=[option[0] for option in VERIFIER_OPTIONS],
+        help="Verifier for a non-interactive run. Defaults to auto.",
+    )
+    run_p.add_argument("--minif2f-local", help="Path to a local miniF2F checkout.")
+    run_p.add_argument("--minif2f-ref", default="main", help="miniF2F git ref, default main.")
+    run_p.add_argument("--lean-root", help="Path to miniF2F checkout root for Lean.")
+    run_p.add_argument("--results-dir", help="Results directory or run slug.")
+    run_p.add_argument("--max-iters", type=int, default=3, help="ReAct max tool-repair iterations.")
+    prompt_group = run_p.add_mutually_exclusive_group()
+    prompt_group.add_argument("--include-informal", dest="include_informal", action="store_true", default=True)
+    prompt_group.add_argument("--formal-only", dest="include_informal", action="store_false")
+    dashboard_group = run_p.add_mutually_exclusive_group()
+    dashboard_group.add_argument("--dashboard", dest="dashboard", action="store_true", default=True)
+    dashboard_group.add_argument("--no-dashboard", dest="dashboard", action="store_false")
 
     pre_p = sub.add_parser("preflight", help="Verify tasks and Lean before a benchmark run.")
     pre_p.add_argument(
@@ -124,11 +149,13 @@ def _load_dotenv_file(path: Path) -> None:
 def _run(args: argparse.Namespace) -> int:
     try:
         selections = (
-            _prompt_run_selections()
+            _run_selections_from_args(args)
+            if _has_run_args(args)
+            else _prompt_run_selections()
             if args.advanced
             else _prompt_rapid_run_selections()
         )
-    except RuntimeError as exc:
+    except (RuntimeError, ValueError) as exc:
         print("LLM is not available:")
         print(f"  {exc}")
         print("No benchmark tasks were run.")
@@ -176,6 +203,80 @@ def _run(args: argparse.Namespace) -> int:
         dashboard_path = write_dashboard(load_results([config.results_dir]), config.results_dir / "dashboard.html")
         print(f"Wrote dashboard to {dashboard_path}")
     return 0
+
+
+def _has_run_args(args: argparse.Namespace) -> bool:
+    return any(
+        getattr(args, name) is not None
+        for name in (
+            "agents",
+            "tasks",
+            "task_count",
+            "model_provider",
+            "model_name",
+            "verifier",
+            "minif2f_local",
+            "lean_root",
+            "results_dir",
+        )
+    ) or args.max_iters != 3 or not args.include_informal or not args.dashboard
+
+
+def _run_selections_from_args(args: argparse.Namespace) -> dict:
+    agents = _parse_agents(args.agents or DEFAULT_RAPID_AGENTS)
+    tasks = _tasks_from_args(tasks=args.tasks, task_count=args.task_count)
+    model_provider = args.model_provider
+    model_name = args.model_name
+    verifier = args.verifier
+    if model_provider is None or verifier is None:
+        default_provider, default_model, default_verifier = _default_profile_for_args()
+        model_provider = model_provider or default_provider
+        model_name = model_name or default_model
+        verifier = verifier or default_verifier
+    return {
+        "agents": agents,
+        "tasks": tasks,
+        "model_provider": model_provider,
+        "model_name": model_name,
+        "verifier": verifier,
+        "lean_root": args.lean_root,
+        "minif2f_local": args.minif2f_local,
+        "minif2f_ref": args.minif2f_ref,
+        "results_dir": args.results_dir,
+        "max_iters": args.max_iters,
+        "include_informal": args.include_informal,
+        "dashboard": args.dashboard,
+    }
+
+
+def _parse_agents(raw: str) -> list[str]:
+    valid_names = set(registered_agent_names())
+    agents = [part.strip() for part in raw.split(",") if part.strip()]
+    unknown = [agent for agent in agents if agent not in valid_names]
+    if not agents:
+        raise ValueError("Enter at least one agent.")
+    if unknown:
+        raise ValueError(f"Unknown agent(s): {', '.join(unknown)}")
+    return agents
+
+
+def _tasks_from_args(*, tasks: str | None, task_count: int | None) -> list[str]:
+    if tasks and task_count is not None:
+        raise ValueError("Use --tasks or --task-count, not both.")
+    if tasks:
+        return resolve_task_ids([tasks])
+    if task_count is not None:
+        if not 1 <= task_count <= len(DEFAULT_TASK_IDS):
+            raise ValueError(f"--task-count must be between 1 and {len(DEFAULT_TASK_IDS)}")
+        return list(DEFAULT_TASK_IDS[:task_count])
+    return ["all"]
+
+
+def _default_profile_for_args() -> tuple[str, str | None, str]:
+    try:
+        return _default_rapid_profile()
+    except RuntimeError:
+        return ("mock", None, "static")
 
 
 def _prompt_run_selections() -> dict:
