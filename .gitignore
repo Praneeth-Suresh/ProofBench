@@ -6,10 +6,19 @@
 
 # Keep core source and project files
 !AGENTS.md
+!CLAUDE.md
 !README.md
 !pyproject.toml
 !uv.lock
 
+!.beryl/
+!.beryl/**
+!.codex/
+!.codex/**
+!.cursor/
+!.cursor/**
+!.github/
+!.github/**
 !proofbench/
 !proofbench/**
 !scripts/
@@ -28,6 +37,10 @@
 .uv-cache/
 .venv/
 venv/
+.beryl/driver/config.env
+.beryl/driver/logs/
+.beryl/driver/state/
+.beryl/agent/session-state.md
 
 # Ignore generated benchmark outputs
 results/
