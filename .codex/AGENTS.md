@@ -30,9 +30,9 @@ Load additional files only when they are relevant to the task. Keep context focu
 
 ## ProofBench Core Rules
 
-- ProofBench supports the workshop agent-design track. Agents should improve theorem-proving accuracy, efficiency, or speed over the plain LLM baseline while using the same model and task set.
+- ProofBench supports the workshop agent-design track. Agents should improve theorem-proving success rate, Lean-backed proof completion, efficiency, or speed over the plain LLM baseline while using the same model and task set.
 - Do not vendor miniF2F benchmark statements or proofs into this repository. Store theorem IDs and retrieve task content at test time through `proofbench/tasks/minif2f.py`.
-- Treat Lean compiler success as the only objective accuracy signal. Static checks are smoke tests only.
+- Treat Lean compiler success as the only objective solve signal. Static checks are smoke tests only.
 - Keep model access behind `proofbench/models/base.py` so agents remain provider-independent.
 - Log every comparison through `proofbench/logging/result_store.py`; do not hand-edit result files.
 - Preserve the baseline agent so new workshop agents can be compared against it.

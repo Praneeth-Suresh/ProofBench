@@ -16,7 +16,7 @@
 
 1. Keep model access behind `proofbench/models/base.py` and provider adapters.
 2. Do not vendor miniF2F benchmark statements or proofs; store theorem ids and retrieve task content through `proofbench/tasks/minif2f.py`.
-3. Treat Lean compiler success as the only objective accuracy signal; label static checks as smoke tests.
+3. Treat Lean compiler success as the only objective solve signal; label static checks as smoke tests and do not average them into Lean-backed proof-completion metrics.
 4. Log every comparison through `ResultStore`; do not hand-edit result JSONL files.
 5. Preserve the baseline agent so new agents can be compared against it.
 6. Keep reusable tool code under `proofbench/tools/` when agent strategies need tools.

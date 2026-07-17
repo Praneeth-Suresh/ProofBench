@@ -12,6 +12,7 @@ from proofbench.cli import (
     _run_selections_from_args,
 )
 from proofbench.config import DEFAULT_TASK_IDS
+from proofbench.config import ProofBenchConfig
 
 
 class CliPromptTests(unittest.TestCase):
@@ -124,6 +125,14 @@ class CliPromptTests(unittest.TestCase):
 
 
 class CliEnvTests(unittest.TestCase):
+    def test_absolute_results_dir_is_used_directly(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir) / "proofbench-results"
+
+            config = ProofBenchConfig.from_env(results_dir=str(target))
+
+            self.assertEqual(config.results_dir, target)
+
     def test_load_dotenv_file_sets_missing_env_vars(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             env_path = Path(tmpdir) / ".env"

@@ -7,15 +7,15 @@ Build **ProofBench** for **agent-design workshop participants and maintainers** 
 ## Primary Workflows
 
 1. **Run an experiment quickly**: choose registered agents and task ids/count from one command, run the configured LLM/verifier, and write JSONL results plus optional dashboard output.
-2. **Compare results**: summarize stored runs across accuracy, efficiency, and speed without hand-editing result files.
+2. **Compare results**: summarize stored runs across success rate, proof completion, efficiency, and speed without hand-editing result files.
 3. **Add an agent design**: implement `run(task, model) -> AgentResult`, register the name, and evaluate it against the baseline on the same tasks/model.
-4. **Verify proof quality**: use Lean compiler acceptance as the objective accuracy signal when Lean is configured; treat static checks only as smoke tests.
+4. **Verify proof progress**: use Lean compiler acceptance as the objective solve signal when Lean is configured; treat static checks only as smoke tests.
 
 ## Non-Goals
 
 - Vendoring miniF2F benchmark statements or proofs into this repository.
 - Letting agents bypass `proofbench/models/base.py` for provider-specific model access.
-- Treating mock/static smoke results as final theorem-proving accuracy claims.
+- Treating mock/static smoke results as final theorem-proving success or completion claims.
 - Replacing human interpretation of research tradeoffs with a single score.
 
 ## External Systems

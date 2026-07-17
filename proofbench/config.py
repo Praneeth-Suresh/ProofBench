@@ -70,8 +70,11 @@ def _resolve_results_dir(results_dir: str | None) -> Path:
 
     candidate = Path(raw).expanduser()
 
+    if candidate.is_absolute():
+        return candidate.resolve()
+
     # Keep explicit multi-segment paths (e.g. "results/run_x", "../scratch/results") as-is.
-    if not candidate.is_absolute() and candidate.parent != Path("."):
+    if candidate.parent != Path("."):
         return (PROJECT_ROOT / candidate).resolve()
 
     token = _safe_slug(str(candidate))

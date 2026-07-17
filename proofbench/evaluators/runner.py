@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 
 from proofbench.agents.base import Agent
-from proofbench.evaluators.accuracy import accuracy_score
+from proofbench.evaluators.accuracy import success_score
 from proofbench.evaluators.efficiency import efficiency_metrics
 from proofbench.evaluators.lean import ProofVerifier
 from proofbench.evaluators.speed import speed_metrics
@@ -33,11 +33,14 @@ class EvaluationRunner:
                     "source_ref": task.source_ref,
                     "source_urls": task.source_urls,
                     "model": getattr(model, "name", "unknown"),
-                    "accuracy": accuracy_score(verification),
-                    "proof_quality_score": verification.proof_quality_score,
-                    "proof_progress": verification.proof_progress,
+                    "metric_validity": metric_validity(verification, getattr(model, "name", "unknown")),
+                    "solved": verification.passed,
+                    "success_score": success_score(verification),
+                    "proof_completion": verification.proof_completion,
+                    "verified_prefix_ratio": verification.verified_prefix_ratio,
+                    "repairability_score": verification.repairability_score,
                     "failure_profile": verification.failure_profile,
-                    "proof_quality_metrics": verification.proof_quality_metrics,
+                    "completion_metrics": verification.completion_metrics,
                     "verification": asdict(verification),
                     "efficiency": efficiency_metrics(agent_result),
                     "speed": speed_metrics(agent_result, verification),
@@ -47,3 +50,15 @@ class EvaluationRunner:
                 self.result_store.append(row)
                 rows.append(row)
         return rows
+
+
+def metric_validity(verification, model_name: str) -> str:
+    if str(model_name).startswith("mock-"):
+        return "mock_smoke"
+    if not verification.verifier_available:
+        return "unavailable"
+    if verification.verifier == "lean":
+        return "lean"
+    if verification.verifier == "static":
+        return "static_smoke"
+    return verification.verifier

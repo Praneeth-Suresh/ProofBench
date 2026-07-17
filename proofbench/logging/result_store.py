@@ -43,14 +43,34 @@ def summarize(rows: list[dict]) -> dict[str, dict[str, float]]:
     summary: dict[str, dict[str, float]] = {}
     for agent, items in grouped.items():
         n = max(1, len(items))
+        valid_proof_items = [item for item in items if item.get("metric_validity") == "lean"]
+        valid_n = len(valid_proof_items)
+        solved_tasks = sum(_success_score(item) for item in items)
         summary[agent] = {
             "tasks": float(len(items)),
-            "accuracy": sum(float(item["accuracy"]) for item in items) / n,
-            "avg_proof_quality_score": sum(float(item.get("proof_quality_score", item["accuracy"])) for item in items) / n,
-            "avg_proof_progress": sum(float(item.get("proof_progress", item["accuracy"])) for item in items) / n,
+            "solved_tasks": solved_tasks,
+            "success_rate": solved_tasks / n,
+            "proof_metric_coverage": valid_n / n,
+            "avg_proof_completion": _average_metric(valid_proof_items, "proof_completion"),
+            "avg_verified_prefix_ratio": _average_metric(valid_proof_items, "verified_prefix_ratio"),
+            "avg_repairability_score": _average_metric(items, "repairability_score"),
             "avg_total_tokens": sum(item["efficiency"]["total_tokens"] for item in items) / n,
             "avg_model_calls": sum(item["efficiency"]["model_calls"] for item in items) / n,
             "avg_tool_calls": sum(item["efficiency"]["tool_calls"] for item in items) / n,
             "avg_total_elapsed_s": sum(item["speed"]["total_elapsed_s"] for item in items) / n,
         }
     return summary
+
+
+def _success_score(row: dict) -> float:
+    if "success_score" in row:
+        return float(row["success_score"])
+    if "solved" in row:
+        return 1.0 if row["solved"] else 0.0
+    return float(row.get("accuracy", 0.0))
+
+
+def _average_metric(rows: list[dict], name: str) -> float:
+    if not rows:
+        return 0.0
+    return sum(float(row.get(name, 0.0)) for row in rows) / len(rows)

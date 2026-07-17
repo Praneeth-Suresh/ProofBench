@@ -29,7 +29,7 @@
 
 ## ProofBench-Specific Verification
 
-- Lean compiler success is the only objective accuracy signal.
+- Lean compiler success is the only objective solve signal.
 - `static` verifier results are smoke checks and must not be presented as theorem-proving correctness.
 - `auto` mode assigns no proof credit when Lean is unavailable.
 - Result persistence is verified by confirming `ResultStore` wrote a `run_*.jsonl` file under the selected results directory.

@@ -31,7 +31,8 @@ The evaluator wraps proof bodies with the retrieved theorem header before checki
 
 Return `AgentResult` with enough metadata for all three comparison axes:
 
-- Accuracy: generated Lean candidate checked by the configured verifier.
+- Success: generated Lean candidate checked by the configured verifier.
+- Proof progress: diagnostics from the configured verifier, including proof completion and repairability.
 - Efficiency: `model_calls`, token counts, and `tool_calls`.
 - Speed: agent runtime and model/tool latency.
 - Trace: high-signal reasoning/tool events, without secrets or unrelated local files.

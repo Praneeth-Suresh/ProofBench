@@ -66,7 +66,7 @@ def _template(payload_b64: str) -> str:
 <body>
 <header>
   <h1>ProofBench Results</h1>
-  <p>Compiler-verified accuracy, continuous proof-quality signals, model/tool efficiency, and runtime comparison.</p>
+  <p>Solve rate, Lean-backed proof completion, repairability, model/tool efficiency, and runtime comparison.</p>
 </header>
 <main>
   <div id="app"></div>
@@ -123,14 +123,53 @@ function formatJson(value) {{
 }}
 
 const metrics = [
-  ["accuracy", "Accuracy"],
-  ["avg_proof_quality_score", "Avg Proof Quality"],
-  ["avg_proof_progress", "Avg Proof Progress"],
+  ["success_rate", "Success Rate"],
+  ["proof_metric_coverage", "Lean Metric Coverage"],
+  ["avg_proof_completion", "Avg Proof Completion"],
+  ["avg_verified_prefix_ratio", "Avg Verified Prefix"],
+  ["avg_repairability_score", "Avg Repairability"],
   ["avg_total_tokens", "Avg Tokens"],
   ["avg_model_calls", "Avg Model Calls"],
   ["avg_tool_calls", "Avg Tool Calls"],
   ["avg_total_elapsed_s", "Avg Runtime (s)"]
 ];
+
+function rowSuccess(row) {{
+  if (row.success_score !== null && row.success_score !== undefined) {{
+    return Number(row.success_score);
+  }}
+  if (row.solved !== null && row.solved !== undefined) {{
+    return row.solved ? 1 : 0;
+  }}
+  return Number(row.accuracy || 0);
+}}
+
+function rowCompletion(row) {{
+  if (row.proof_completion !== null && row.proof_completion !== undefined) {{
+    return Number(row.proof_completion);
+  }}
+  if (row.proof_progress !== null && row.proof_progress !== undefined) {{
+    return Number(row.proof_progress);
+  }}
+  return rowSuccess(row);
+}}
+
+function rowVerifiedPrefix(row) {{
+  if (row.verified_prefix_ratio !== null && row.verified_prefix_ratio !== undefined) {{
+    return Number(row.verified_prefix_ratio);
+  }}
+  if (row.proof_progress !== null && row.proof_progress !== undefined) {{
+    return Number(row.proof_progress);
+  }}
+  return rowSuccess(row);
+}}
+
+function rowRepairability(row) {{
+  if (row.repairability_score !== null && row.repairability_score !== undefined) {{
+    return Number(row.repairability_score);
+  }}
+  return Number(row.proof_quality_metrics?.repairability || 0);
+}}
 
 function download(filename, content, type) {{
   const blob = new Blob([content], {{type}});
@@ -143,15 +182,18 @@ function download(filename, content, type) {{
 }}
 
 function csv() {{
-  const header = ["agent","task_id","accuracy","proof_quality_score","proof_progress","failure_profile","model_calls","total_tokens","tool_calls","total_elapsed_s","verifier","verifier_available"];
+  const header = ["agent","task_id","metric_validity","solved","success_score","proof_completion","verified_prefix_ratio","repairability_score","failure_profile","model_calls","total_tokens","tool_calls","total_elapsed_s","verifier","verifier_available"];
   const lines = [header.join(",")];
   for (const row of data.rows) {{
     lines.push([
       row.agent,
       row.task_id,
-      row.accuracy,
-      row.proof_quality_score,
-      row.proof_progress,
+      row.metric_validity,
+      row.solved,
+      rowSuccess(row),
+      rowCompletion(row),
+      rowVerifiedPrefix(row),
+      rowRepairability(row),
       row.failure_profile,
       row.efficiency.model_calls,
       row.efficiency.total_tokens,
@@ -199,9 +241,10 @@ function openRunModal(index) {{
     </div>
     <div class="modal-body">
       <div class="detail-grid">
-        <div class="detail-stat"><span class="detail-label">Accuracy</span><span class="detail-value">${{formatMetricValue(row.accuracy)}}</span></div>
-        <div class="detail-stat"><span class="detail-label">Proof quality</span><span class="detail-value">${{formatMetricValue(row.proof_quality_score)}}</span></div>
-        <div class="detail-stat"><span class="detail-label">Proof progress</span><span class="detail-value">${{formatMetricValue(row.proof_progress)}}</span></div>
+        <div class="detail-stat"><span class="detail-label">Metric validity</span><span class="detail-value">${{escapeHtml(row.metric_validity || "legacy")}}</span></div>
+        <div class="detail-stat"><span class="detail-label">Solved</span><span class="detail-value">${{formatMetricValue(rowSuccess(row))}}</span></div>
+        <div class="detail-stat"><span class="detail-label">Proof completion</span><span class="detail-value">${{formatMetricValue(rowCompletion(row))}}</span></div>
+        <div class="detail-stat"><span class="detail-label">Repairability</span><span class="detail-value">${{formatMetricValue(rowRepairability(row))}}</span></div>
         <div class="detail-stat"><span class="detail-label">Verifier available</span><span class="detail-value">${{escapeHtml(row.verification?.verifier_available)}}</span></div>
       </div>
       <section class="detail-section">
@@ -248,20 +291,22 @@ function render() {{
     </section>`).join("");
   const rows = data.rows.map((row, idx) => `
     <tr>
-      <td>${{row.agent}}</td><td>${{row.task_id}}</td><td>${{row.accuracy}}</td>
-      <td>${{formatMetricValue(row.proof_quality_score)}}</td><td>${{formatMetricValue(row.proof_progress)}}</td>
+      <td>${{row.agent}}</td><td>${{row.task_id}}</td><td>${{escapeHtml(row.metric_validity || "legacy")}}</td>
+      <td>${{formatMetricValue(rowSuccess(row))}}</td><td>${{formatMetricValue(rowCompletion(row))}}</td>
+      <td>${{formatMetricValue(rowVerifiedPrefix(row))}}</td><td>${{formatMetricValue(rowRepairability(row))}}</td>
       <td>${{row.efficiency.total_tokens}}</td><td>${{row.efficiency.tool_calls}}</td>
       <td>${{formatMetricValue(row.speed.total_elapsed_s)}}</td><td>${{row.verification.verifier}}</td>
       <td><button class="secondary" onclick="openRunModal(${{idx}})">View output</button></td>
     </tr>`).join("");
   app.innerHTML = `
     <div class="actions">
+      <a href="proofbench-results.xlsx" download><button>Download Excel</button></a>
       <button onclick="download('proofbench-results.csv', csv(), 'text/csv')">Download CSV</button>
       <button onclick="download('proofbench-results.json', JSON.stringify(data.rows, null, 2), 'application/json')">Download JSON</button>
     </div>
     <div class="grid">${{panels}}</div>
     <table>
-      <thead><tr><th>Agent</th><th>Task</th><th>Accuracy</th><th>Quality</th><th>Progress</th><th>Tokens</th><th>Tool Calls</th><th>Total s</th><th>Verifier</th><th>Output</th></tr></thead>
+      <thead><tr><th>Agent</th><th>Task</th><th>Validity</th><th>Solved</th><th>Completion</th><th>Verified Prefix</th><th>Repairability</th><th>Tokens</th><th>Tool Calls</th><th>Total s</th><th>Verifier</th><th>Output</th></tr></thead>
       <tbody>${{rows}}</tbody>
     </table>
     <div id="run-modal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-modal="true" onclick="if (event.target === this) closeRunModal()">

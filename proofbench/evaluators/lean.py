@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import shutil
 import subprocess
 import tempfile
@@ -89,10 +90,13 @@ class ProofVerifier:
                 elapsed_s=time.perf_counter() - start,
             )
 
-        lean_src = self._lean_src_dir()
+        lean_path_dirs = self._lean_path_dirs(lean_cmd)
         env = os.environ.copy()
+        lean_path = os.pathsep.join(str(path) for path in lean_path_dirs)
         if existing := env.get("LEAN_PATH"):
-            env["LEAN_PATH"] = f"{lean_src}{os.pathsep}{existing}"
+            env["LEAN_PATH"] = f"{lean_path}{os.pathsep}{existing}"
+        else:
+            env["LEAN_PATH"] = lean_path
         with tempfile.NamedTemporaryFile("w", suffix=".lean", delete=False, encoding="utf-8") as tmp:
             tmp.write(lean_code)
             tmp_path = Path(tmp.name)
@@ -155,6 +159,49 @@ class ProofVerifier:
         if (self.lean_root / "lean" / "src" / "minif2f_import.lean").exists():
             return self.lean_root / "lean" / "src"
         return self.lean_root / "src"
+
+    def _lean_path_dirs(self, lean_cmd: list[str]) -> list[Path]:
+        assert self.lean_root is not None
+        paths = self._lean_reported_paths(lean_cmd)
+        lean_src = self._lean_src_dir()
+        if paths:
+            if lean_src not in paths:
+                paths.append(lean_src)
+            return paths
+        leanpkg_path = self.lean_root / "leanpkg.path"
+        if not leanpkg_path.exists():
+            return [self._lean_src_dir()]
+        paths = []
+        for raw_line in leanpkg_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line.startswith("path "):
+                continue
+            raw_path = line.split(" ", 1)[1].strip()
+            path = Path(raw_path)
+            paths.append(path if path.is_absolute() else self.lean_root / path)
+        return paths or [self._lean_src_dir()]
+
+    def _lean_reported_paths(self, lean_cmd: list[str]) -> list[Path]:
+        assert self.lean_root is not None
+        env = os.environ.copy()
+        env.pop("LEAN_PATH", None)
+        try:
+            completed = subprocess.run(
+                [*lean_cmd, "--path"],
+                cwd=str(self.lean_root),
+                env=env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=10,
+                check=False,
+            )
+            if completed.returncode != 0:
+                return []
+            data = json.loads(completed.stdout)
+        except Exception:
+            return []
+        return [Path(path) for path in data.get("path", [])]
 
     def _lean_command(self) -> list[str] | None:
         override = os.getenv("PROOFBENCH_LEAN_EXE")

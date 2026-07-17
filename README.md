@@ -6,7 +6,7 @@ ProofBench is a small evaluation harness for comparing theorem-proving agent des
 2. Pick which miniF2F task ids, or how many default tasks, to use.
 3. Run the same configured model and verifier for every selected agent/task pair.
 4. Let ProofBench write JSONL results and optional dashboard output.
-5. Compare accuracy, efficiency, and speed.
+5. Compare solve rate, Lean-backed proof completion, efficiency, and speed.
 
 ProofBench is designed for workshop iteration: keep the model and task set fixed, change the agent design, and measure whether the agent improves over the plain LLM baseline.
 
@@ -37,6 +37,18 @@ Run the baseline and ReAct agents on the first default task and write results wi
 uv run proofbench run \
   --agents llm_baseline,react \
   --task-count 1
+```
+
+Run the baseline against the search-agent suite:
+
+```bash
+uv run proofbench run \
+  --agents llm_baseline,self_consistency,tree_of_thoughts,graph_of_thoughts,lats \
+  --task-count 1 \
+  --search-samples 3 \
+  --search-width 2 \
+  --search-depth 2 \
+  --lats-rollouts 4
 ```
 
 Run specific miniF2F theorem ids:
@@ -102,6 +114,10 @@ Common non-interactive flags:
 | `--minif2f-local PATH` | Local miniF2F checkout for task retrieval. |
 | `--results-dir NAME_OR_PATH` | Results directory or run slug under `results/`. |
 | `--max-iters N` | ReAct repair/tool iterations. |
+| `--search-samples N` | Self-Consistency independent proof attempts. |
+| `--search-width N` | Branching width for Tree of Thoughts, Graph of Thoughts, and LATS. |
+| `--search-depth N` | Search depth for Tree of Thoughts and LATS. |
+| `--lats-rollouts N` | Monte Carlo Tree Search rollout count for LATS. |
 | `--formal-only` | Exclude informal statement from agent prompts. |
 | `--no-dashboard` | Skip dashboard generation. |
 
@@ -121,6 +137,8 @@ Common non-interactive flags:
   Print a compact summary from result files.
 - `uv run proofbench dashboard results --output results/dashboard.html`  
   Build or rebuild the HTML dashboard.
+- `uv run proofbench export results --output results/proofbench-results.xlsx`  
+  Export persisted JSONL rows to an Excel workbook with `Summary` and `Rows` sheets.
 - `./scripts/preflight.sh`  
   Convenience wrapper for preflight using `.uv-cache`.
 - `./scripts/run_full_comparison.sh`  
@@ -141,21 +159,40 @@ Do not hand-edit result files. Rebuild views from stored rows instead:
 ```bash
 uv run proofbench summarize results
 uv run proofbench dashboard results --output results/dashboard.html
+uv run proofbench export results --output results/proofbench-results.xlsx
 ```
 
 Every row includes:
 
-- `accuracy`: proof acceptance score from the configured verifier.
-- `proof_quality_score`, `proof_progress`, `failure_profile`: richer proof diagnostics.
+- `metric_validity`: whether proof metrics came from real Lean, static smoke, mock smoke, or an unavailable verifier.
+- `solved` and `success_score`: proof-assistant acceptance and its numeric solve score.
+- `proof_completion`, `verified_prefix_ratio`, `repairability_score`, `failure_profile`: verifier-grounded proof diagnostics.
 - `efficiency`: model calls, token counts, and tool calls.
 - `speed`: total runtime, model latency, and verification time.
 - `raw_answer` and `trace`: agent output and trace metadata.
 
 Traces may contain prompts and model output, so never include secrets or unrelated local file contents in agent prompts.
 
+Runs also write `proofbench-results.xlsx` next to the dashboard when dashboard output is enabled. The HTML dashboard includes downloads for Excel, CSV, and JSON, but the JSONL files remain the source of truth.
+
+## Built-In Search Agents
+
+Registered agents:
+
+| Agent | Design | How ProofBench adapts it |
+| --- | --- | --- |
+| `llm_baseline` | One-shot LLM proof generation | Plain fixed-model baseline for every comparison. |
+| `react` | ReAct-style repair loop | Alternates model proof attempts with Lean-check feedback. |
+| `self_consistency` | Self-Consistency | Samples independent proof attempts, verifies each, then selects the verified or most consistent/highest-quality candidate. |
+| `tree_of_thoughts` | Tree of Thoughts | Explores a bounded beam of proof thoughts and keeps the strongest Lean-checked states. |
+| `graph_of_thoughts` | Graph of Thoughts | Generates proof vertices, improves failed candidates, and aggregates strong attempts through graph edges. |
+| `lats` | Language Agent Tree Search | Runs a bounded MCTS-style proof search with Lean diagnostics as environment feedback and reflection for failed candidates. |
+
+Search budgets intentionally default small so workshop runs stay affordable. Increase them only when the model/verifier setup is ready for a real comparison.
+
 ## Lean-Verified Runs
 
-Lean compiler success is the only objective accuracy signal. Static checks are smoke tests only.
+Lean compiler success is the only objective solve signal. Static checks are smoke tests only.
 
 By default, no local miniF2F checkout is required for task retrieval; tasks are downloaded and cached from GitHub. For Lean verification, configure:
 
@@ -255,7 +292,7 @@ For the workshop exercise, keep the model fixed and compare designs on the same 
 
 1. Pick one of the default ids, or another custom task, that is too hard to solve in one shot.
 2. Run baseline plus at least one tool-using agent on that same task.
-3. Compare accuracy, model calls/tokens/tool calls, and runtime/verification time.
+3. Compare success rate, proof completion diagnostics, model calls/tokens/tool calls, and runtime/verification time.
 4. Repeat with more tasks once a pattern is clear.
 
 This keeps the evaluation focused on agent behavior rather than on changing prompt style or model size.

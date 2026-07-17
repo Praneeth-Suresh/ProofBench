@@ -19,9 +19,12 @@ class DashboardTests(unittest.TestCase):
                 "source_ref": "main",
                 "source_urls": {},
                 "model": "mock-fail",
-                "accuracy": 0.0,
-                "proof_quality_score": 0.25,
-                "proof_progress": 0.2,
+                "metric_validity": "lean",
+                "solved": False,
+                "success_score": 0.0,
+                "proof_completion": 0.25,
+                "verified_prefix_ratio": 0.2,
+                "repairability_score": 0.25,
                 "failure_profile": {"parse_error": True, "passed": False},
                 "verification": {"verifier": "static", "verifier_available": True, "diagnostics": "", "passed": False, "elapsed_s": 0.01},
                 "efficiency": {"model_calls": 1, "input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "tool_calls": 0},
@@ -37,9 +40,12 @@ class DashboardTests(unittest.TestCase):
                 "source_ref": "main",
                 "source_urls": {},
                 "model": "mock-fail",
-                "accuracy": 0.0,
-                "proof_quality_score": 0.55,
-                "proof_progress": 0.5,
+                "metric_validity": "lean",
+                "solved": False,
+                "success_score": 0.0,
+                "proof_completion": 0.55,
+                "verified_prefix_ratio": 0.5,
+                "repairability_score": 0.75,
                 "failure_profile": {"unsolved_goals": True, "passed": False},
                 "verification": {"verifier": "static", "verifier_available": True, "diagnostics": "", "passed": False, "elapsed_s": 0.01},
                 "efficiency": {"model_calls": 5, "input_tokens": 20, "output_tokens": 10, "total_tokens": 30, "tool_calls": 2},
@@ -68,10 +74,15 @@ class DashboardTests(unittest.TestCase):
             payload = json.loads(base64.b64decode(encoded).decode("utf-8"))
             self.assertEqual(len(payload["rows"]), 2)
             self.assertEqual(payload["rows"][0]["raw_answer"], "proof_1")
+            self.assertIn("Download Excel", raw)
             self.assertIn("View output", raw)
             self.assertIn("LLM Output", raw)
             self.assertIn("Lean Diagnostics", raw)
             self.assertIn("Failure Profile", raw)
+            self.assertIn("Success Rate", raw)
+            self.assertIn("Avg Proof Completion", raw)
             summary = summarize(loaded)
             self.assertIn("llm_baseline", summary)
             self.assertIn("react", summary)
+            self.assertIn("success_rate", summary["llm_baseline"])
+            self.assertIn("avg_proof_completion", summary["react"])

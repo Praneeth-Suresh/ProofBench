@@ -17,10 +17,12 @@ ProofBench is a thin, provider-independent evaluation harness: task retrieval, m
 | Decision | Choice | Date | ADR |
 | --- | --- | --- | --- |
 | Benchmark task storage | Store theorem ids only and retrieve miniF2F content at test/run time. | 2026-07-07 | N/A |
-| Objective accuracy | Lean compiler acceptance is the only objective accuracy signal. | 2026-07-07 | N/A |
+| Objective solve signal | Lean compiler acceptance is the only objective solve signal; proof-completion diagnostics are secondary and Lean-backed only. | 2026-07-07 | N/A |
 | Result persistence | Every comparison row goes through `proofbench/logging/result_store.py` JSONL writes. | 2026-07-07 | N/A |
 | Model boundary | Agents receive `ChatModel` from `proofbench/models/base.py`; provider SDK details stay behind adapters. | 2026-07-07 | N/A |
 | Simple run workflow | `proofbench run` keeps the rapid prompt; `proofbench run --agents ... --tasks/--task-count ...` runs non-interactively. | 2026-07-07 | N/A |
+| Search-agent comparison | Self-Consistency, Tree of Thoughts, Graph of Thoughts, and LATS are separate registered agents with bounded search budgets. | 2026-07-10 | N/A |
+| Spreadsheet retrieval | JSONL remains source of truth; Excel workbooks are generated views from stored rows. | 2026-07-10 | N/A |
 
 ## Pressure Points
 
@@ -28,6 +30,7 @@ ProofBench is a thin, provider-independent evaluation harness: task retrieval, m
 - Result files may contain agent traces; prompts must avoid secrets and unrelated local file contents.
 - CLI defaults should support both workshop demos and reproducible automation without forcing users through advanced prompts.
 - `uv` may be unavailable in some agent environments; `python3 -m unittest discover -s tests -v` remains the deterministic fallback check.
+- Search-agent budgets can multiply model and verifier calls quickly, so defaults should stay conservative and explicit.
 
 ## Recording Rule
 
