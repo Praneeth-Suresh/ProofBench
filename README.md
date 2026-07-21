@@ -77,6 +77,20 @@ Equivalent fallback if `uv` is not available:
 python3 -m proofbench.cli run --agents llm_baseline --task-count 1 --model-provider mock --verifier static --results-dir smoke --no-dashboard
 ```
 
+Run the GLaM-inspired top-2 agent MoE without re-running comparison agents already stored in a results directory:
+
+```bash
+uv run proofbench run \
+  --agents moe_fused \
+  --tasks aime_1988_p8 \
+  --results-dir results/lean-evaluation \
+  --model-provider gemini \
+  --verifier lean \
+  --dashboard results/lean-evaluation/dashboard.html
+```
+
+`moe_fused` reads prior Lean-backed rows from its selected results directory to calibrate its deterministic top-2 router. It still runs exactly two registered experts for each new task.
+
 ## Interactive Runs
 
 For the simplest guided flow:
@@ -187,6 +201,7 @@ Registered agents:
 | `tree_of_thoughts` | Tree of Thoughts | Explores a bounded beam of proof thoughts and keeps the strongest Lean-checked states. |
 | `graph_of_thoughts` | Graph of Thoughts | Generates proof vertices, improves failed candidates, and aggregates strong attempts through graph edges. |
 | `lats` | Language Agent Tree Search | Runs a bounded MCTS-style proof search with Lean diagnostics as environment feedback and reflection for failed candidates. |
+| `moe_fused` | GLaM-style top-2 agent MoE | Routes to exactly two existing agents with normalized weights, then verifier-selects or repairs their proof candidates. |
 
 Search budgets intentionally default small so workshop runs stay affordable. Increase them only when the model/verifier setup is ready for a real comparison.
 

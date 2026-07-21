@@ -13,6 +13,7 @@ from proofbench.evaluators.accuracy import success_score
 from proofbench.evaluators.lean import ProofVerifier
 from proofbench.evaluators.runner import EvaluationRunner, metric_validity
 from proofbench.logging.dashboard import write_dashboard
+from proofbench.logging.comparison import paired_agent_comparison
 from proofbench.logging.excel_export import write_excel
 from proofbench.logging.result_store import ResultStore, load_results, summarize
 from proofbench.preflight import run_preflight
@@ -29,6 +30,7 @@ AGENT_LABELS = {
     "tree_of_thoughts": "Tree of Thoughts proof search",
     "graph_of_thoughts": "Graph of Thoughts proof search",
     "lats": "Language Agent Tree Search",
+    "moe_fused": "GLaM-style top-2 agent MoE",
 }
 DEFAULT_RAPID_AGENTS = "llm_baseline,react"
 
@@ -93,6 +95,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     dashboard_group.add_argument("--no-dashboard", dest="dashboard", action="store_false")
 
+    compare_p = sub.add_parser("compare", help="Report paired Lean-only agent comparison metrics.")
+    compare_p.add_argument("paths", nargs="*", default=[str(ProofBenchConfig().results_dir)])
+    compare_p.add_argument("--candidate", default="moe_fused")
+    compare_p.add_argument("--baseline", default="llm_baseline")
+    compare_p.add_argument("--min-solve-delta", type=float, default=0.0)
+    compare_p.add_argument("--max-token-multiplier", type=float, default=2.0)
+    compare_p.add_argument("--max-time-multiplier", type=float, default=2.0)
+
     pre_p = sub.add_parser("preflight", help="Verify tasks and Lean before a benchmark run.")
     pre_p.add_argument(
         "tasks",
@@ -142,6 +152,8 @@ def main(argv: list[str] | None = None) -> int:
         return _summarize(args)
     if args.command == "dashboard":
         return _dashboard(args)
+    if args.command == "compare":
+        return _compare(args)
     if args.command == "export":
         return _export(args)
     if args.command == "reverify":
@@ -236,6 +248,7 @@ def _run(args: argparse.Namespace) -> int:
         search_width=selections["search_width"],
         search_depth=selections["search_depth"],
         lats_rollouts=selections["lats_rollouts"],
+        routing_history=load_results([config.results_dir]),
     )
     store = ResultStore(config.results_dir)
     rows = EvaluationRunner(verifier=verifier, result_store=store).run(
@@ -555,6 +568,13 @@ def _read_line(prompt: str) -> str:
 def _summarize(args: argparse.Namespace) -> int:
     rows = load_results([Path(path) for path in args.paths])
     print(json.dumps(summarize(rows), indent=2))
+    return 0
+
+
+def _compare(args: argparse.Namespace) -> int:
+    rows = load_results([Path(path) for path in args.paths])
+    report = paired_agent_comparison(rows, candidate=args.candidate, baseline=args.baseline, min_solve_delta=args.min_solve_delta, max_token_multiplier=args.max_token_multiplier, max_time_multiplier=args.max_time_multiplier)
+    print(json.dumps(report, indent=2))
     return 0
 
 

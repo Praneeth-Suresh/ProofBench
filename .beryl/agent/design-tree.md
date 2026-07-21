@@ -24,6 +24,8 @@ ProofBench is a thin, provider-independent evaluation harness: task retrieval, m
 | Search-agent comparison | Self-Consistency, Tree of Thoughts, Graph of Thoughts, and LATS are separate registered agents with bounded search budgets. | 2026-07-10 | N/A |
 | Spreadsheet retrieval | JSONL remains source of truth; Excel workbooks are generated views from stored rows. | 2026-07-10 | N/A |
 
+| Agent MoE routing | `moe_fused` is the only MoE mode and routes every task to exactly two registered existing experts; historical Lean rows calibrate, but never widen, the deterministic gate. | 2026-07-21 | N/A |
+
 ## Pressure Points
 
 - The simplest command must not hide whether results came from real Lean verification, `auto` no-credit fallback, or static smoke checks.

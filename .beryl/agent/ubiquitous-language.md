@@ -2,6 +2,8 @@
 
 | Business Term | Technical Symbol | Definition | Constraints | Avoid |
 | --- | --- | --- | --- | --- |
+| Agent Router | `AgentRouter` | GLaM-inspired sparse gate that ranks existing agent experts for one task and returns exactly two distinct expert names with normalized weights. | Uses static task features with calibrated Lean-row history; never selects models or wider top-k sets. | A model router or arbitrary expert fan-out |
+| Fused Agent | `moe_fused` | Agent that runs the router-selected two experts, verifier-ranks their candidates, and synthesizes one repair only when both are incomplete. | Keeps the `AgentResult` contract and stores transparency data in trace. | A separate result writer or a third selected expert |
 | ProofBench | `proofbench` | Evaluation harness for comparing theorem-proving agents on runtime-fetched miniF2F tasks. | Keeps model/task/verifier seams explicit. | Treating it as one monolithic script |
 | Agent Design | `Agent` | A theorem-proving strategy that receives a `ProofTask` and `ChatModel` and returns `AgentResult`. | Must be registered before running by name. | Provider-specific agent that imports SDKs directly |
 | Baseline Agent | `llm_baseline` | Plain one-shot LLM proof attempt preserved for comparison. | Must remain available. | Replacing baseline with an experimental design |

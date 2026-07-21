@@ -12,6 +12,8 @@
 | Results | JSONL persistence, loading, summaries, HTML dashboard rendering | Hand-edited result rows, proof verification | `proofbench/logging/result_store.py`, `proofbench/logging/dashboard.py` |
 | Beryl Control Plane | Repository-owned agent context, deterministic checks, hooks, and driver files | ProofBench product logic | `.beryl/` |
 
+The Agents context includes `moe_fused`: it selects only two existing registered experts, stores routing transparency in `AgentResult.trace`, and leaves all row persistence to Results.
+
 ## Boundary Rules
 
 1. Keep model access behind `proofbench/models/base.py` and provider adapters.
