@@ -38,10 +38,12 @@ run_static_fallback() {
   echo "Running lightweight full-comparison in smoke mode (mock model + static verifier)."
   echo "Tip: set GEMINI_API_KEY and PROOFBENCH_MINIF2F_LEAN_ROOT to run Lean-grade full evaluation."
 
-  PROOFBENCH_RESULTS_DIR="$RESULTS_DIR" uv --cache-dir .uv-cache run proofbench run <<EOF
-llm_baseline,react
-3
-EOF
+  uv --cache-dir .uv-cache run proofbench run \
+    --agents llm_baseline,react \
+    --task-count 3 \
+    --model-provider mock \
+    --verifier static \
+    --results-dir "$RESULTS_DIR"
 }
 
 run_lean_full() {
@@ -50,10 +52,12 @@ run_lean_full() {
 
   uv --cache-dir .uv-cache run proofbench preflight
 
-  PROOFBENCH_RESULTS_DIR="$RESULTS_DIR" uv --cache-dir .uv-cache run proofbench run <<EOF
-llm_baseline,react
-3
-EOF
+  uv --cache-dir .uv-cache run proofbench run \
+    --agents llm_baseline,react \
+    --task-count 3 \
+    --model-provider gemini \
+    --verifier lean \
+    --results-dir "$RESULTS_DIR"
 }
 
 if lean_available; then

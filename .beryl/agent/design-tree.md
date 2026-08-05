@@ -22,6 +22,7 @@ ProofBench is a thin, provider-independent evaluation harness: task retrieval, m
 | Model boundary | Agents receive `ChatModel` from `proofbench/models/base.py`; provider SDK details stay behind adapters. | 2026-07-07 | N/A |
 | Simple run workflow | `proofbench run` keeps the rapid prompt; `proofbench run --agents ... --tasks/--task-count ...` runs non-interactively. | 2026-07-07 | N/A |
 | Search-agent comparison | Self-Consistency, Tree of Thoughts, Graph of Thoughts, and LATS are separate registered agents with bounded search budgets. | 2026-07-10 | N/A |
+| Ultimatum proof repair | `ultimatum` combines a bounded proof-mode portfolio with Lean-ranked, diagnostic-guided repair while remaining one registered `Agent` implementation. | 2026-08-05 | N/A |
 | Spreadsheet retrieval | JSONL remains source of truth; Excel workbooks are generated views from stored rows. | 2026-07-10 | N/A |
 
 | Agent MoE routing | `moe_fused` is the only MoE mode and routes every task to exactly two registered existing experts; historical Lean rows calibrate, but never widen, the deterministic gate. | 2026-07-21 | N/A |

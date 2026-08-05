@@ -9,6 +9,7 @@ from proofbench.agents.react_agent import ReActLeanAgent
 from proofbench.agents.router import AgentRouter
 from proofbench.agents.self_consistency import SelfConsistencyLeanAgent
 from proofbench.agents.tree_of_thoughts import TreeOfThoughtsLeanAgent
+from proofbench.agents.ultimatum import UltimatumLeanAgent
 from proofbench.tools.lean_check import LeanCheckTool
 
 
@@ -20,7 +21,7 @@ EXPERT_AGENT_NAMES = (
     "graph_of_thoughts",
     "lats",
 )
-REGISTERED_AGENT_NAMES = (*EXPERT_AGENT_NAMES, "moe_fused")
+REGISTERED_AGENT_NAMES = (*EXPERT_AGENT_NAMES, "moe_fused", "ultimatum")
 
 
 def registered_agent_names() -> tuple[str, ...]:
@@ -105,6 +106,14 @@ def create_agents(
                     router=AgentRouter(EXPERT_AGENT_NAMES, history_rows=routing_history or []),
                     experts=experts,
                     check_tool=check_tool,
+                    include_informal=include_informal,
+                )
+            )
+        elif name == "ultimatum":
+            agents.append(
+                UltimatumLeanAgent(
+                    check_tool,
+                    max_iters=max_iters,
                     include_informal=include_informal,
                 )
             )

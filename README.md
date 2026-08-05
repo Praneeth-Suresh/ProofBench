@@ -51,6 +51,23 @@ uv run proofbench run \
   --lats-rollouts 4
 ```
 
+Run the complete workshop technique sweep on one task with local smoke settings:
+
+```bash
+uv run proofbench run \
+  --agents llm_baseline,react,self_consistency,tree_of_thoughts,graph_of_thoughts,lats,moe_fused \
+  --task-count 1 \
+  --model-provider mock \
+  --verifier static \
+  --results-dir workshop-smoke \
+  --no-dashboard
+```
+
+Static/mock output proves task retrieval, agent wiring, and result persistence;
+it is not evidence of theorem-proving correctness. Repeat the sweep with the
+same task set, a real model, and `--verifier lean` before drawing success-rate
+or efficiency conclusions.
+
 Run specific miniF2F theorem ids:
 
 ```bash
@@ -309,5 +326,16 @@ For the workshop exercise, keep the model fixed and compare designs on the same 
 2. Run baseline plus at least one tool-using agent on that same task.
 3. Compare success rate, proof completion diagnostics, model calls/tokens/tool calls, and runtime/verification time.
 4. Repeat with more tasks once a pattern is clear.
+
+For the full technique exercise, use the sweep command above and then inspect
+the result summary or run a paired Lean-only gate for the MoE candidate:
+
+```bash
+uv run proofbench summarize workshop-results
+uv run proofbench compare workshop-results --baseline llm_baseline --candidate moe_fused
+```
+
+The paired comparison ignores static/mock rows and only reports matching
+Lean-verified task/model/verifier rows.
 
 This keeps the evaluation focused on agent behavior rather than on changing prompt style or model size.
