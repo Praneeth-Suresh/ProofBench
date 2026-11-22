@@ -1,14 +1,12 @@
 # ProofBench
 
-ProofBench is a small evaluation harness for comparing theorem-proving agent designs on runtime-fetched miniF2F Lean tasks. The intended workflow is simple:
+ProofBench compares theorem-proving agents on the same miniF2F Lean problems. Start with a one-shot baseline and a repair loop, then compare Lean acceptance, model calls, tokens, and latency on the resulting JSONL.
 
-1. Pick which registered agents to run.
-2. Pick which miniF2F task ids, or how many default tasks, to use.
-3. Run the same configured model and verifier for every selected agent/task pair.
-4. Let ProofBench write JSONL results and optional dashboard output.
-5. Compare solve rate, Lean-backed proof completion, efficiency, and speed.
-
-ProofBench is designed for workshop iteration: keep the model and task set fixed, change the agent design, and measure whether the agent improves over the plain LLM baseline.
+| If you want to… | Start here |
+| --- | --- |
+| Check your installation without a model or Lean | Run the [mock/static smoke test](#fastest-experiment-command). It checks wiring, not proof correctness. |
+| Compare two agents with the Lean compiler | Follow the [one-task, pinned miniF2F example](#lean-verified-runs). |
+| Understand the metrics or run a workshop | See the [benchmark protocol](docs/benchmark_protocol.md) and [workshop handout](HANDOUT.md). |
 
 ## Quick Setup
 
@@ -224,36 +222,45 @@ Search budgets intentionally default small so workshop runs stay affordable. Inc
 
 ## Lean-Verified Runs
 
-Lean compiler success is the only objective solve signal. Static checks are smoke tests only.
+This one-task example runs `llm_baseline` and `react` on the same theorem from a
+[pinned miniF2F revision](https://github.com/facebookresearch/miniF2F/tree/e4f113090ad82d64f8ce064d2f55b613a9b6bded). It is an example configuration, not a published benchmark result. Use it to check your setup before running a larger comparison.
 
-By default, no local miniF2F checkout is required for task retrieval; tasks are downloaded and cached from GitHub. For Lean verification, configure:
+You need Gemini credentials and a Lean 3 toolchain managed by [elan](https://github.com/leanprover/elan). The pinned miniF2F [package file](https://github.com/facebookresearch/miniF2F/blob/e4f113090ad82d64f8ce064d2f55b613a9b6bded/leanpkg.toml) specifies Lean 3.42.1 and a mathlib commit. Follow [miniF2F's Lean setup instructions](https://github.com/facebookresearch/miniF2F/blob/e4f113090ad82d64f8ce064d2f55b613a9b6bded/README.md#structure) if your checkout cannot build, and use the Lean 3 binary from that toolchain (not Lean 4).
 
-```bash
-export PROOFBENCH_MINIF2F_LOCAL="/path/to/miniF2F"
-export PROOFBENCH_MINIF2F_LEAN_ROOT="/path/to/miniF2F"
-```
-
-Then ensure Lean tooling is usable for miniF2F:
+From the ProofBench checkout, after `uv sync` and configuring the credentials shown above:
 
 ```bash
-cd /path/to/miniF2F
-leanpkg configure
-leanproject get-mathlib-cache
-leanproject build
+export PROOFBENCH_MINIF2F_REF=e4f113090ad82d64f8ce064d2f55b613a9b6bded
+git clone https://github.com/facebookresearch/miniF2F.git ../miniF2F-proofbench
+git -C ../miniF2F-proofbench checkout --detach "$PROOFBENCH_MINIF2F_REF"
+export PROOFBENCH_MINIF2F_LOCAL="$(cd ../miniF2F-proofbench && pwd)"
+export PROOFBENCH_MINIF2F_LEAN_ROOT="$PROOFBENCH_MINIF2F_LOCAL"
+(
+  cd "$PROOFBENCH_MINIF2F_LOCAL" &&
+  leanpkg configure &&
+  leanpkg build
+)
+export PROOFBENCH_LEAN_EXE="$(cd "$PROOFBENCH_MINIF2F_LOCAL" && elan which lean)"
 ```
 
-If `leanpkg` is unavailable, install mathlib tools and elan tooling first, then retry:
+Then run from ProofBench. Set `PROOFBENCH_MODEL` to a Gemini model ID available to your account, and keep it the same for both agents:
 
 ```bash
-uv tool install mathlibtools
-curl https://elan.lean-lang.org/elan-init.sh -sSf | sh
+: "${PROOFBENCH_MODEL:?Set PROOFBENCH_MODEL to your Gemini model ID}"
+uv run proofbench preflight --minif2f-ref "$PROOFBENCH_MINIF2F_REF" algebra_9onxpypzleqsum2onxpy
+uv run proofbench run \
+  --agents llm_baseline,react \
+  --tasks algebra_9onxpypzleqsum2onxpy \
+  --minif2f-ref "$PROOFBENCH_MINIF2F_REF" \
+  --model-provider gemini \
+  --model-name "$PROOFBENCH_MODEL" \
+  --verifier lean \
+  --results-dir results/lean-example \
+  --no-dashboard
+uv run proofbench summarize results/lean-example
 ```
 
-After Lean is working, this should pass without `--skip-lean`:
-
-```bash
-uv run proofbench preflight
-```
+Inspect the two agent/task rows in the generated JSONL. Check that `metric_validity` is `lean` before comparing `solved`; a Lean-verified attempt can fail to solve the theorem. A no-credentials run of this same pair with `--model-provider mock --verifier static` writes two `mock_smoke` rows with zero proof-metric coverage. Do not include those rows in a proof-solvability comparison. Save the upstream revision, exact model ID, Lean version, and experiment options alongside the run.
 
 ## Default Tasks
 
